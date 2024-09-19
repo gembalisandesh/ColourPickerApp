@@ -29,7 +29,7 @@ ColourPickerApp is a SwiftUI-based iOS application that allows users to generate
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/ColourPickerApp.git
+   git clone https://github.com/gembalisandesh/ColourPickerApp.git
    ```
 
 2. Navigate to the project directory:
