@@ -12,62 +12,17 @@ struct ContentView: View {
 
     var body: some View {
         NavigationView {
-            VStack {
-                ScrollView {
-                    ForEach(viewModel.colorCards) { card in
-                        VStack {
-                            Rectangle()
-                                .fill(card.color)
-                                .frame(height: 150)
-                                .cornerRadius(10)
-                                .padding()
-                            
-                            Text("Hex: \(card.hex)")
-                                .font(.title3)
-                                .padding()
-                            
-                            Text("Timestamp: \(card.timestamp)")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
-                    }
-                }
-              
-                Button("Generate Random Color") {
-                    let newColor = viewModel.randomColor()
-                    let hex = viewModel.colorToHex(color: newColor)
-                    let timestamp = Date()
-                    
-                    let colorCard = ColorCard(color: newColor, hex: hex, timestamp: "\(timestamp)")
-                    viewModel.colorCards.append(colorCard)
-                    viewModel.saveColorsToUserDefaults()
-                    
-                    if viewModel.isConnected {
-                        viewModel.syncWithFirebase(colorCard: colorCard)
-                    }
-                }
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-              
-                Text(viewModel.isConnected ? "Online" : "Offline")
-                    .font(.caption)
-                    .foregroundColor(viewModel.isConnected ? .green : .red)
-                    .padding()
-               
-                Button(action: {
-                    viewModel.toggleNetworkStatus()
-                }) {
-                    Text(viewModel.isConnected ? "Go Offline" : "Go Online")
-                        .padding()
-                        .background(viewModel.isConnected ? Color.red : Color.green)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
-                .padding()
+            VStack(spacing: 20) {
+                colorCardList
+                
+                generateColorButton
             }
             .navigationTitle("Colour Picker")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    connectionStatusView
+                }
+            }
             .onAppear {
                 viewModel.loadColorsFromUserDefaults()
                 viewModel.fetchColorsFromFirebase()
@@ -75,6 +30,61 @@ struct ContentView: View {
             .alert(isPresented: $viewModel.showingErrorAlert) {
                 Alert(title: Text("Sync Failed"), message: Text("Will retry when back online."), dismissButton: .default(Text("OK")))
             }
+        }
+    }
+    
+    private var colorCardList: some View {
+        ScrollView {
+            LazyVStack(spacing: 20) {
+                ForEach(viewModel.colorCards) { card in
+                    ColorCardView(card: card)
+                }
+            }
+            .padding()
+        }
+    }
+    
+    private var generateColorButton: some View {
+        Button(action: generateRandomColor) {
+            Text("Generate Random Color")
+                .fontWeight(.semibold)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+        }
+        .padding(.horizontal)
+    }
+    
+    private var connectionStatusView: some View {
+        HStack {
+            Circle()
+                .fill(viewModel.isConnected ? Color.green : Color.red)
+                .frame(width: 10, height: 10)
+            
+            Text(viewModel.isConnected ? "Online" : "Offline")
+                .font(.caption)
+                .foregroundColor(viewModel.isConnected ? .green : .red)
+            
+            Button(action: viewModel.toggleNetworkStatus) {
+                Image(systemName: viewModel.isConnected ? "wifi" : "wifi.slash")
+                    .foregroundColor(viewModel.isConnected ? .green : .red)
+            }
+        }
+    }
+    
+    private func generateRandomColor() {
+        let newColor = viewModel.randomColor()
+        let hex = viewModel.colorToHex(color: newColor)
+        let timestamp = Date()
+        
+        let colorCard = ColorCard(color: newColor, hex: hex, timestamp: "\(timestamp)")
+        viewModel.colorCards.append(colorCard)
+        viewModel.saveColorsToUserDefaults()
+        
+        if viewModel.isConnected {
+            viewModel.syncWithFirebase(colorCard: colorCard)
         }
     }
 }
