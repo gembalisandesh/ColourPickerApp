@@ -2,9 +2,6 @@
 
 ColourPickerApp is a SwiftUI-based iOS application that allows users to generate, save, and manage color cards. It features offline support, Firebase integration for cloud synchronization, and a user-friendly interface.
 
-## Screenshots
-
-
 ## Features
 
 - Generate random color cards
@@ -16,6 +13,11 @@ ColourPickerApp is a SwiftUI-based iOS application that allows users to generate
 - Error handling with user-friendly alert notifications
 - Deletion of specific colors or all colors at once, both locally and from Firebase
 
+## Screenshots
+
+<img src="https://github.com/user-attachments/assets/2b774a58-c957-47e1-be92-dfb434e70f42" width="200" /> 
+<img src="https://github.com/user-attachments/assets/84b899d9-945a-478a-86d1-cd369f828895" width="200" /> 
+<img src="https://github.com/user-attachments/assets/9103819f-b614-4633-80e6-0a86434e89ce" width="200" />
 ## Requirements
 
 - iOS 14.0+
@@ -27,7 +29,7 @@ ColourPickerApp is a SwiftUI-based iOS application that allows users to generate
 
 1. Clone the repository:
    ```
-   git clone https://github.com/gembalisandesh/ColourPickerApp.git
+   git clone https://github.com/yourusername/ColourPickerApp.git
    ```
 
 2. Navigate to the project directory:
@@ -61,7 +63,6 @@ ColourPickerApp is a SwiftUI-based iOS application that allows users to generate
 2. Tap the "Generate Color" button to create a new random color card.
 3. View your color cards in the main list, showing the color, hex code, and timestamp.
 4. To delete a specific color:
-   - Swipe left on a color card, or
    - Tap the delete button (trash icon) on the color card
 5. To delete all colors:
    - Use the "Delete All Colors" button at the bottom of the screen
@@ -97,9 +98,12 @@ The app includes robust error handling:
 
 ## Deletion Features
 
-- Individual Color Deletion: Users can delete a specific color card by swiping left on the card or tapping the delete button. This removes the color from both local storage and Firebase (when online).
-- Bulk Deletion: The "Delete All Colors" feature allows users to remove all color cards at once, both from local storage and Firebase.
+- Individual Color Deletion: Users can delete a specific color card by tapping the delete button (trash icon) on the card. A confirmation dialog appears before the deletion is performed.
+- Bulk Deletion: The "Delete All Colors" feature allows users to remove all color cards at once. A confirmation dialog appears before proceeding with the deletion.
+
+Both deletion operations remove colors from local storage and Firebase (when online).
 
 ## Contribution
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
