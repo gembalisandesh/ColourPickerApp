@@ -24,12 +24,15 @@ class ColorViewModel: ObservableObject {
         loadColorsFromUserDefaults()
         fetchColorsFromFirebase()
     }
-   
+
     func toggleNetworkStatus() {
         manualMode.toggle()
         isConnected = !manualMode
         if isConnected {
+            print("Device is online. Attempting to sync offline data.")
             retrySyncForOfflineData()
+        } else {
+            print("Device is offline.")
         }
     }
     
@@ -39,7 +42,7 @@ class ColorViewModel: ObservableObject {
         let blue = CGFloat.random(in: 0...1)
         return Color(red: red, green: green, blue: blue)
     }
-    
+
     func colorToHex(color: Color) -> String {
         let uiColor = UIColor(color)
         var red: CGFloat = 0
@@ -55,6 +58,7 @@ class ColorViewModel: ObservableObject {
         
         return String(format: "#%02X%02X%02X", r, g, b)
     }
+    
     func saveColorsToUserDefaults() {
         let colorData = colorCards.map { card -> [String: Any] in
             return [
@@ -67,6 +71,7 @@ class ColorViewModel: ObservableObject {
         }
         
         UserDefaults.standard.set(colorData, forKey: "colorCards")
+        print("Colors saved to UserDefaults: \(colorCards.map { $0.hex })")
     }
     
     func loadColorsFromUserDefaults() {
@@ -80,11 +85,15 @@ class ColorViewModel: ObservableObject {
             let timestamp = data["timestamp"] as! String
             return ColorCard(color: Color(red: red, green: green, blue: blue), hex: hex, timestamp: timestamp)
         }
+        print("Loaded colors from UserDefaults: \(colorCards.map { $0.hex })")
     }
     
     // Sync color card with Firebase Firestore
     func syncWithFirebase(colorCard: ColorCard) {
-        guard isConnected else { return }
+        guard isConnected else {
+            print("Offline - Will retry syncing color \(colorCard.hex) later.")
+            return
+        }
         
         let db = Firestore.firestore()
         db.collection("colors").addDocument(data: [
@@ -95,7 +104,7 @@ class ColorViewModel: ObservableObject {
                 print("Error syncing color: \(error)")
                 self.showingErrorAlert = true
             } else {
-                print("Color synced successfully")
+                print("Color \(colorCard.hex) synced successfully")
             }
         }
     }
@@ -106,7 +115,10 @@ class ColorViewModel: ObservableObject {
                 if !self.manualMode {
                     self.isConnected = path.status == .satisfied
                     if self.isConnected {
+                        print("Network status: Online")
                         self.retrySyncForOfflineData()
+                    } else {
+                        print("Network status: Offline")
                     }
                 }
             }
@@ -120,18 +132,16 @@ class ColorViewModel: ObservableObject {
             if let error = error {
                 print("Error getting documents: \(error)")
             } else {
-                for document in querySnapshot!.documents {
-                    print("\(document.documentID) => \(document.data())")
-                }
+                print("Fetched colors from Firebase: \(querySnapshot!.documents.map { $0.data() })")
             }
         }
     }
 
-    
     func retrySyncForOfflineData() {
         guard isConnected else { return }
         
         for card in colorCards {
+            print("Attempting to sync color \(card.hex) with Firebase")
             syncWithFirebase(colorCard: card)
         }
     }
