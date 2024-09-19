@@ -10,7 +10,6 @@ import Firebase
 
 @main
 struct ColourPickerAppApp: App {
-    // Create an instance of AppDelegate
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
