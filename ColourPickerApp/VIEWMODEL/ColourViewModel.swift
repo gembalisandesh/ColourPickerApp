@@ -151,6 +151,7 @@ class ColorViewModel: ObservableObject {
             deleteColorFromFirebase(card) { error in
                 if let error = error {
                     self.handleError(error)
+                } else {
                     print("Color \(card.hex) deleted from Firebase.")
                 }
             }
