@@ -10,9 +10,6 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = ColorViewModel()
     @State private var showOfflineAlert = false
-    @State private var editingCard: ColorCard?
-    @State private var showingColorPicker = false
-    @State private var tempColor: Color = .red
 
     var body: some View {
         NavigationView {
@@ -47,17 +44,6 @@ struct ContentView: View {
                     showOfflineAlert = true
                 }
             }
-            .sheet(isPresented: $showingColorPicker) {
-                ColorPicker("Select a color", selection: $tempColor)
-                    .padding()
-                Button("Save") {
-                    if let editingCard = editingCard {
-                        updateColor(editingCard)
-                    }
-                    showingColorPicker = false
-                }
-                .padding()
-            }
         }
     }
     
@@ -65,13 +51,7 @@ struct ContentView: View {
         ScrollView {
             LazyVStack(spacing: 20) {
                 ForEach(viewModel.colorCards) { card in
-                    ColorCardView(card: card, onEdit: {
-                        editingCard = card
-                        tempColor = card.color
-                        showingColorPicker = true
-                    }, onDelete: {
-                        deleteColor(card)
-                    })
+                    ColorCardView(card: card)
                 }
             }
             .padding()
@@ -119,27 +99,6 @@ struct ContentView: View {
         
         if viewModel.isConnected {
             viewModel.syncWithFirebase(colorCard: colorCard)
-        }
-    }
-    
-    private func updateColor(_ card: ColorCard) {
-        if let index = viewModel.colorCards.firstIndex(where: { $0.id == card.id }) {
-            let updatedCard = ColorCard(color: tempColor, hex: viewModel.colorToHex(color: tempColor), timestamp: "\(Date())")
-            viewModel.colorCards[index] = updatedCard
-            viewModel.saveColorsToUserDefaults()
-            
-            if viewModel.isConnected {
-                viewModel.updateColorInFirebase(updatedCard)
-            }
-        }
-    }
-    
-    private func deleteColor(_ card: ColorCard) {
-        viewModel.colorCards.removeAll { $0.id == card.id }
-        viewModel.saveColorsToUserDefaults()
-        
-        if viewModel.isConnected {
-            viewModel.deleteColorFromFirebase(card)
         }
     }
 }
