@@ -16,7 +16,10 @@ struct ContentView: View {
             VStack(spacing: 20) {
                 colorCardList
                 
-                generateColorButton
+                HStack {
+                    generateColorButton
+                    deleteAllColorsButton
+                }
             }
             .navigationTitle("Colour Picker")
             .toolbar {
@@ -51,13 +54,15 @@ struct ContentView: View {
         ScrollView {
             LazyVStack(spacing: 20) {
                 ForEach(viewModel.colorCards) { card in
-                    ColorCardView(card: card)
+                    ColorCardView(card: card) {
+                        viewModel.deleteColorCard(card)
+                    }
                 }
             }
             .padding()
         }
     }
-    
+
     private var generateColorButton: some View {
         Button(action: generateRandomColor) {
             Text("Generate Random Color")
@@ -65,6 +70,19 @@ struct ContentView: View {
                 .padding()
                 .frame(maxWidth: .infinity)
                 .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+        }
+        .padding(.horizontal)
+    }
+    
+    private var deleteAllColorsButton: some View {
+        Button(action: deleteAllColors) {
+            Text("Delete All Colors")
+                .fontWeight(.semibold)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.red)
                 .foregroundColor(.white)
                 .cornerRadius(10)
         }
@@ -99,6 +117,14 @@ struct ContentView: View {
         
         if viewModel.isConnected {
             viewModel.syncWithFirebase(colorCard: colorCard)
+        }
+    }
+    
+    private func deleteAllColors() {
+        viewModel.deleteAllColorsFromUserDefaults()
+        
+        if viewModel.isConnected {
+            viewModel.deleteAllColorsFromFirebase()
         }
     }
 }

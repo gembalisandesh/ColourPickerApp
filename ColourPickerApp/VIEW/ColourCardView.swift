@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ColorCardView: View {
     let card: ColorCard
-    
+    let onDelete: () -> Void 
     var body: some View {
         VStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 15)
@@ -32,6 +32,19 @@ struct ColorCardView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 10)
+            
+            HStack {
+                Spacer()
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                        .padding(10)
+                        .background(Color.white)
+                        .cornerRadius(10)
+                        .shadow(radius: 3)
+                }
+            }
+            .padding(.trailing, 10)
         }
         .padding()
         .background(Color(.systemBackground))
@@ -54,8 +67,12 @@ struct ColorCardView: View {
 
 #Preview {
     VStack(spacing: 20) {
-        ColorCardView(card: ColorCard(color: .red, hex: "#FF0000", timestamp: "2024-09-19T10:30:00 +0000"))
-        ColorCardView(card: ColorCard(color: .blue, hex: "#0000FF", timestamp: "2024-09-19T11:45:00 +0000"))
+        ColorCardView(card: ColorCard(color: .red, hex: "#FF0000", timestamp: "2024-09-19T10:30:00 +0000"), onDelete: {
+            print("Deleted red color card")
+        })
+        ColorCardView(card: ColorCard(color: .blue, hex: "#0000FF", timestamp: "2024-09-19T11:45:00 +0000"), onDelete: {
+            print("Deleted blue color card")
+        })
     }
     .padding()
 }

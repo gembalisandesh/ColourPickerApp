@@ -24,7 +24,7 @@ class ColorViewModel: ObservableObject {
         loadColorsFromUserDefaults()
         fetchColorsFromFirebase()
     }
-
+    
     func toggleNetworkStatus() {
         manualMode.toggle()
         isConnected = !manualMode
@@ -42,7 +42,7 @@ class ColorViewModel: ObservableObject {
         let blue = CGFloat.random(in: 0...1)
         return Color(red: red, green: green, blue: blue)
     }
-
+    
     func colorToHex(color: Color) -> String {
         let uiColor = UIColor(color)
         var red: CGFloat = 0
@@ -88,7 +88,6 @@ class ColorViewModel: ObservableObject {
         print("Loaded colors from UserDefaults: \(colorCards.map { $0.hex })")
     }
     
-    // Sync color card with Firebase Firestore
     func syncWithFirebase(colorCard: ColorCard) {
         guard isConnected else {
             print("Offline - Will retry syncing color \(colorCard.hex) later.")
@@ -136,7 +135,71 @@ class ColorViewModel: ObservableObject {
             }
         }
     }
-
+    
+    func deleteColorCard(_ card: ColorCard) {
+       
+        if let index = colorCards.firstIndex(where: { $0.hex == card.hex }) {
+            colorCards.remove(at: index)
+            print("Color \(card.hex) deleted locally.")
+        }
+        
+        saveColorsToUserDefaults()
+        
+        if isConnected {
+            deleteColorFromFirebase(card)
+        } else {
+            print("Offline - Will retry deleting color \(card.hex) from Firebase later.")
+        }
+    }
+    func deleteAllColorsFromUserDefaults() {
+        
+        colorCards.removeAll()
+        UserDefaults.standard.removeObject(forKey: "colorCards")
+        print("All colors deleted from UserDefaults.")
+    }
+    
+    func deleteAllColorsFromFirebase() {
+        let db = Firestore.firestore()
+    
+        db.collection("colors").getDocuments { querySnapshot, error in
+            if let error = error {
+                print("Error fetching colors for deletion: \(error)")
+            } else {
+                for document in querySnapshot!.documents {
+                    document.reference.delete { error in
+                        if let error = error {
+                            print("Error deleting color document: \(error)")
+                        } else {
+                            print("Deleted color document: \(document.documentID) from Firebase.")
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    func deleteColorFromFirebase(_ card: ColorCard) {
+        let db = Firestore.firestore()
+        
+        db.collection("colors")
+            .whereField("hex", isEqualTo: card.hex)
+            .getDocuments { querySnapshot, error in
+                if let error = error {
+                    print("Error finding color for deletion: \(error)")
+                } else {
+                    for document in querySnapshot!.documents {
+                        document.reference.delete { error in
+                            if let error = error {
+                                print("Error deleting color: \(error)")
+                                self.showingErrorAlert = true
+                            } else {
+                                print("Color \(card.hex) deleted from Firebase.")
+                            }
+                        }
+                    }
+                }
+            }
+    }
     func retrySyncForOfflineData() {
         guard isConnected else { return }
         
