@@ -148,7 +148,12 @@ class ColorViewModel: ObservableObject {
         saveColorsToUserDefaults()
         
         if isConnected {
-            deleteColorFromFirebase(card)
+            deleteColorFromFirebase(card) { error in
+                if let error = error {
+                    self.handleError(error)
+                    print("Color \(card.hex) deleted from Firebase.")
+                }
+            }
         } else {
             print("Offline - Will retry deleting color \(card.hex) from Firebase later.")
         }
@@ -190,7 +195,7 @@ class ColorViewModel: ObservableObject {
         }
     }
     
-    func deleteColorFromFirebase(_ card: ColorCard) {
+    func deleteColorFromFirebase(_ card: ColorCard, completion: @escaping (Error?) -> Void) {
         let db = Firestore.firestore()
         
         db.collection("colors")
@@ -198,6 +203,7 @@ class ColorViewModel: ObservableObject {
             .getDocuments { querySnapshot, error in
                 if let error = error {
                     self.handleError(error)
+                    completion(error)
                 } else {
                     let deleteGroup = DispatchGroup()
                     
@@ -208,15 +214,17 @@ class ColorViewModel: ObservableObject {
                                 print("Error deleting color \(card.hex): \(error.localizedDescription)")
                                 self.showingErrorAlert = true
                                 self.errorMessage = error.localizedDescription
+                                completion(error)
                             } else {
                                 print("Color \(card.hex) deleted from Firebase.")
+                                completion(nil)
                             }
                             deleteGroup.leave()
                         }
                     }
                     
                     deleteGroup.notify(queue: .main) {
-                        print("Deletion process for color \(card.hex) completed.")
+                        completion(nil)
                     }
                 }
             }
@@ -228,6 +236,40 @@ class ColorViewModel: ObservableObject {
         for card in colorCards {
             print("Attempting to sync color \(card.hex) with Firebase")
             syncWithFirebase(colorCard: card)
+        }
+        deleteColorsFromFirebaseIfNeeded()
+    }
+    
+    func deleteColorsFromFirebaseIfNeeded() {
+        let db = Firestore.firestore()
+        
+        db.collection("colors").getDocuments { querySnapshot, error in
+            if let error = error {
+                self.handleError(error)
+            } else {
+                let existingColors = querySnapshot?.documents.compactMap { $0.data()["hex"] as? String } ?? []
+                let deletedColors = self.colorCards.filter { !existingColors.contains($0.hex) }
+                
+                let deleteGroup = DispatchGroup()
+                
+                for card in deletedColors {
+                    deleteGroup.enter()
+                    self.deleteColorFromFirebase(card) { error in
+                        if let error = error {
+                            print("Error deleting color \(card.hex): \(error.localizedDescription)")
+                            self.showingErrorAlert = true
+                            self.errorMessage = error.localizedDescription
+                        } else {
+                            print("Color \(card.hex) deleted from Firebase.")
+                        }
+                        deleteGroup.leave()
+                    }
+                }
+                
+                deleteGroup.notify(queue: .main) {
+                    print("All deletion process for offline colors completed.")
+                }
+            }
         }
     }
     
