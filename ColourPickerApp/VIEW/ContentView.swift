@@ -9,6 +9,10 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = ColorViewModel()
+    @State private var showOfflineAlert = false
+    @State private var editingCard: ColorCard?
+    @State private var showingColorPicker = false
+    @State private var tempColor: Color = .red
 
     var body: some View {
         NavigationView {
@@ -30,6 +34,30 @@ struct ContentView: View {
             .alert(isPresented: $viewModel.showingErrorAlert) {
                 Alert(title: Text("Sync Failed"), message: Text("Will retry when back online."), dismissButton: .default(Text("OK")))
             }
+            .alert("Device Offline", isPresented: $showOfflineAlert) {
+                Button("Go Online") {
+                    viewModel.toggleNetworkStatus()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Your device is offline. Go online to sync with Firebase.")
+            }
+            .onChange(of: viewModel.isConnected) {
+                if !viewModel.isConnected {
+                    showOfflineAlert = true
+                }
+            }
+            .sheet(isPresented: $showingColorPicker) {
+                ColorPicker("Select a color", selection: $tempColor)
+                    .padding()
+                Button("Save") {
+                    if let editingCard = editingCard {
+                        updateColor(editingCard)
+                    }
+                    showingColorPicker = false
+                }
+                .padding()
+            }
         }
     }
     
@@ -37,7 +65,13 @@ struct ContentView: View {
         ScrollView {
             LazyVStack(spacing: 20) {
                 ForEach(viewModel.colorCards) { card in
-                    ColorCardView(card: card)
+                    ColorCardView(card: card, onEdit: {
+                        editingCard = card
+                        tempColor = card.color
+                        showingColorPicker = true
+                    }, onDelete: {
+                        deleteColor(card)
+                    })
                 }
             }
             .padding()
@@ -87,8 +121,28 @@ struct ContentView: View {
             viewModel.syncWithFirebase(colorCard: colorCard)
         }
     }
+    
+    private func updateColor(_ card: ColorCard) {
+        if let index = viewModel.colorCards.firstIndex(where: { $0.id == card.id }) {
+            let updatedCard = ColorCard(color: tempColor, hex: viewModel.colorToHex(color: tempColor), timestamp: "\(Date())")
+            viewModel.colorCards[index] = updatedCard
+            viewModel.saveColorsToUserDefaults()
+            
+            if viewModel.isConnected {
+                viewModel.updateColorInFirebase(updatedCard)
+            }
+        }
+    }
+    
+    private func deleteColor(_ card: ColorCard) {
+        viewModel.colorCards.removeAll { $0.id == card.id }
+        viewModel.saveColorsToUserDefaults()
+        
+        if viewModel.isConnected {
+            viewModel.deleteColorFromFirebase(card)
+        }
+    }
 }
-
 
 #Preview {
     ContentView()

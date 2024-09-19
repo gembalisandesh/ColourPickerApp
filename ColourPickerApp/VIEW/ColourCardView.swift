@@ -9,6 +9,8 @@ import SwiftUI
 
 struct ColorCardView: View {
     let card: ColorCard
+    let onEdit: () -> Void
+    let onDelete: () -> Void
     
     var body: some View {
         VStack(spacing: 12) {
@@ -32,6 +34,22 @@ struct ColorCardView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 10)
+            
+            HStack {
+                Button(action: onEdit) {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .buttonStyle(.bordered)
+                
+                Spacer()
+                
+                Button(action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
+                .buttonStyle(.bordered)
+                .foregroundColor(.red)
+            }
+            .padding(.horizontal)
         }
         .padding()
         .background(Color(.systemBackground))
@@ -53,9 +71,10 @@ struct ColorCardView: View {
 }
 
 #Preview {
-    VStack(spacing: 20) {
-        ColorCardView(card: ColorCard(color: .red, hex: "#FF0000", timestamp: "2024-09-19T10:30:00 +0000"))
-        ColorCardView(card: ColorCard(color: .blue, hex: "#0000FF", timestamp: "2024-09-19T11:45:00 +0000"))
-    }
+    ColorCardView(
+        card: ColorCard(color: .red, hex: "#FF0000", timestamp: "2024-09-19T10:30:00 +0000"),
+        onEdit: {},
+        onDelete: {}
+    )
     .padding()
 }
