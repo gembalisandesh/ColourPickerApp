@@ -32,7 +32,11 @@ struct ContentView: View {
                 viewModel.fetchColorsFromFirebase()
             }
             .alert(isPresented: $viewModel.showingErrorAlert) {
-                Alert(title: Text("Sync Failed"), message: Text("Will retry when back online."), dismissButton: .default(Text("OK")))
+                Alert(
+                    title: Text("Sync Failed"),
+                    message: Text(viewModel.errorMessage ?? "An unknown error occurred."),
+                    dismissButton: .default(Text("OK"))
+                )
             }
             .alert("Device Offline", isPresented: $showOfflineAlert) {
                 Button("Go Online") {
@@ -128,6 +132,7 @@ struct ContentView: View {
         }
     }
 }
+
 
 #Preview {
     ContentView()

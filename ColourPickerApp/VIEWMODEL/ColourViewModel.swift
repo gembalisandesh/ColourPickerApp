@@ -14,6 +14,7 @@ class ColorViewModel: ObservableObject {
     @Published var colorCards: [ColorCard] = []
     @Published var isConnected: Bool = true
     @Published var showingErrorAlert: Bool = false
+    @Published var errorMessage: String? = nil 
     
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "NetworkMonitor")
@@ -64,9 +65,9 @@ class ColorViewModel: ObservableObject {
             return [
                 "hex": card.hex,
                 "timestamp": card.timestamp,
-                "red": UIColor(card.color).cgColor.components![0],
-                "green": UIColor(card.color).cgColor.components![1],
-                "blue": UIColor(card.color).cgColor.components![2]
+                "red": UIColor(card.color).cgColor.components?[0] ?? 0,
+                "green": UIColor(card.color).cgColor.components?[1] ?? 0,
+                "blue": UIColor(card.color).cgColor.components?[2] ?? 0
             ]
         }
         
@@ -77,12 +78,14 @@ class ColorViewModel: ObservableObject {
     func loadColorsFromUserDefaults() {
         guard let storedColors = UserDefaults.standard.array(forKey: "colorCards") as? [[String: Any]] else { return }
         
-        colorCards = storedColors.map { data in
-            let red = data["red"] as! CGFloat
-            let green = data["green"] as! CGFloat
-            let blue = data["blue"] as! CGFloat
-            let hex = data["hex"] as! String
-            let timestamp = data["timestamp"] as! String
+        colorCards = storedColors.compactMap { data in
+            guard let red = data["red"] as? CGFloat,
+                  let green = data["green"] as? CGFloat,
+                  let blue = data["blue"] as? CGFloat,
+                  let hex = data["hex"] as? String,
+                  let timestamp = data["timestamp"] as? String else {
+                return nil
+            }
             return ColorCard(color: Color(red: red, green: green, blue: blue), hex: hex, timestamp: timestamp)
         }
         print("Loaded colors from UserDefaults: \(colorCards.map { $0.hex })")
@@ -100,8 +103,7 @@ class ColorViewModel: ObservableObject {
             "timestamp": colorCard.timestamp
         ]) { error in
             if let error = error {
-                print("Error syncing color: \(error)")
-                self.showingErrorAlert = true
+                self.handleError(error)
             } else {
                 print("Color \(colorCard.hex) synced successfully")
             }
@@ -129,15 +131,15 @@ class ColorViewModel: ObservableObject {
         let db = Firestore.firestore()
         db.collection("colors").addSnapshotListener { querySnapshot, error in
             if let error = error {
-                print("Error getting documents: \(error)")
+                self.handleError(error)
             } else {
-                print("Fetched colors from Firebase: \(querySnapshot!.documents.map { $0.data() })")
+                let colors = querySnapshot?.documents.map { $0.data() } ?? []
+                print("Fetched colors from Firebase: \(colors)")
             }
         }
     }
     
     func deleteColorCard(_ card: ColorCard) {
-       
         if let index = colorCards.firstIndex(where: { $0.hex == card.hex }) {
             colorCards.remove(at: index)
             print("Color \(card.hex) deleted locally.")
@@ -151,8 +153,8 @@ class ColorViewModel: ObservableObject {
             print("Offline - Will retry deleting color \(card.hex) from Firebase later.")
         }
     }
+    
     func deleteAllColorsFromUserDefaults() {
-        
         colorCards.removeAll()
         UserDefaults.standard.removeObject(forKey: "colorCards")
         print("All colors deleted from UserDefaults.")
@@ -160,19 +162,29 @@ class ColorViewModel: ObservableObject {
     
     func deleteAllColorsFromFirebase() {
         let db = Firestore.firestore()
-    
+        
         db.collection("colors").getDocuments { querySnapshot, error in
             if let error = error {
-                print("Error fetching colors for deletion: \(error)")
+                self.handleError(error)
             } else {
+                let deleteGroup = DispatchGroup()
+                
                 for document in querySnapshot!.documents {
+                    deleteGroup.enter()
                     document.reference.delete { error in
                         if let error = error {
-                            print("Error deleting color document: \(error)")
+                            print("Error deleting color document \(document.documentID): \(error.localizedDescription)")
+                            self.showingErrorAlert = true
+                            self.errorMessage = error.localizedDescription
                         } else {
-                            print("Deleted color document: \(document.documentID) from Firebase.")
+                            print("Deleted color document \(document.documentID) from Firebase.")
                         }
+                        deleteGroup.leave()
                     }
+                }
+                
+                deleteGroup.notify(queue: .main) {
+                    print("All color documents deletion process completed.")
                 }
             }
         }
@@ -185,21 +197,31 @@ class ColorViewModel: ObservableObject {
             .whereField("hex", isEqualTo: card.hex)
             .getDocuments { querySnapshot, error in
                 if let error = error {
-                    print("Error finding color for deletion: \(error)")
+                    self.handleError(error)
                 } else {
+                    let deleteGroup = DispatchGroup()
+                    
                     for document in querySnapshot!.documents {
+                        deleteGroup.enter()
                         document.reference.delete { error in
                             if let error = error {
-                                print("Error deleting color: \(error)")
+                                print("Error deleting color \(card.hex): \(error.localizedDescription)")
                                 self.showingErrorAlert = true
+                                self.errorMessage = error.localizedDescription
                             } else {
                                 print("Color \(card.hex) deleted from Firebase.")
                             }
+                            deleteGroup.leave()
                         }
+                    }
+                    
+                    deleteGroup.notify(queue: .main) {
+                        print("Deletion process for color \(card.hex) completed.")
                     }
                 }
             }
     }
+    
     func retrySyncForOfflineData() {
         guard isConnected else { return }
         
@@ -207,5 +229,11 @@ class ColorViewModel: ObservableObject {
             print("Attempting to sync color \(card.hex) with Firebase")
             syncWithFirebase(colorCard: card)
         }
+    }
+    
+    private func handleError(_ error: Error) {
+        print("An error occurred: \(error.localizedDescription)")
+        self.errorMessage = error.localizedDescription
+        self.showingErrorAlert = true
     }
 }
