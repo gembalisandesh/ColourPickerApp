@@ -19,13 +19,15 @@ class ColorViewModel: ObservableObject {
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "NetworkMonitor")
     private var manualMode: Bool = false
-    
+    private var offlineTasks: [OfflineTask] = []
+
     init() {
         setupNetworkMonitor()
         loadColorsFromUserDefaults()
+        loadOfflineTasks()
         fetchColorsFromFirebase()
     }
-    
+
     func toggleNetworkStatus() {
         manualMode.toggle()
         isConnected = !manualMode
@@ -43,7 +45,7 @@ class ColorViewModel: ObservableObject {
         let blue = CGFloat.random(in: 0...1)
         return Color(red: red, green: green, blue: blue)
     }
-    
+
     func colorToHex(color: Color) -> String {
         let uiColor = UIColor(color)
         var red: CGFloat = 0
@@ -59,7 +61,7 @@ class ColorViewModel: ObservableObject {
         
         return String(format: "#%02X%02X%02X", r, g, b)
     }
-    
+
     func saveColorsToUserDefaults() {
         let colorData = colorCards.map { card -> [String: Any] in
             return [
@@ -74,7 +76,7 @@ class ColorViewModel: ObservableObject {
         UserDefaults.standard.set(colorData, forKey: "colorCards")
         print("Colors saved to UserDefaults: \(colorCards.map { $0.hex })")
     }
-    
+
     func loadColorsFromUserDefaults() {
         guard let storedColors = UserDefaults.standard.array(forKey: "colorCards") as? [[String: Any]] else { return }
         
@@ -90,55 +92,19 @@ class ColorViewModel: ObservableObject {
         }
         print("Loaded colors from UserDefaults: \(colorCards.map { $0.hex })")
     }
-    
-    func syncWithFirebase(colorCard: ColorCard) {
-        guard isConnected else {
-            print("Offline - Will retry syncing color \(colorCard.hex) later.")
-            return
-        }
+
+    func addColor(_ colorCard: ColorCard) {
+        colorCards.append(colorCard)
+        saveColorsToUserDefaults()
         
-        let db = Firestore.firestore()
-        db.collection("colors").addDocument(data: [
-            "hex": colorCard.hex,
-            "timestamp": colorCard.timestamp
-        ]) { error in
-            if let error = error {
-                self.handleError(error)
-            } else {
-                print("Color \(colorCard.hex) synced successfully")
-            }
+        if isConnected {
+            syncWithFirebase(colorCard: colorCard)
+        } else {
+            offlineTasks.append(.addColor(colorCard))
+            saveOfflineTasks()
         }
     }
-    
-    private func setupNetworkMonitor() {
-        monitor.pathUpdateHandler = { path in
-            DispatchQueue.main.async {
-                if !self.manualMode {
-                    self.isConnected = path.status == .satisfied
-                    if self.isConnected {
-                        print("Network status: Online")
-                        self.retrySyncForOfflineData()
-                    } else {
-                        print("Network status: Offline")
-                    }
-                }
-            }
-        }
-        monitor.start(queue: queue)
-    }
-    
-    func fetchColorsFromFirebase() {
-        let db = Firestore.firestore()
-        db.collection("colors").addSnapshotListener { querySnapshot, error in
-            if let error = error {
-                self.handleError(error)
-            } else {
-                let colors = querySnapshot?.documents.map { $0.data() } ?? []
-                print("Fetched colors from Firebase: \(colors)")
-            }
-        }
-    }
-    
+
     func deleteColorCard(_ card: ColorCard) {
         if let index = colorCards.firstIndex(where: { $0.hex == card.hex }) {
             colorCards.remove(at: index)
@@ -156,47 +122,69 @@ class ColorViewModel: ObservableObject {
                 }
             }
         } else {
+            offlineTasks.append(.deleteColor(card.hex))
+            saveOfflineTasks()
             print("Offline - Will retry deleting color \(card.hex) from Firebase later.")
         }
     }
-    
-    func deleteAllColorsFromUserDefaults() {
+
+    func deleteAllColors() {
         colorCards.removeAll()
-        UserDefaults.standard.removeObject(forKey: "colorCards")
-        print("All colors deleted from UserDefaults.")
-    }
-    
-    func deleteAllColorsFromFirebase() {
-        let db = Firestore.firestore()
+        saveColorsToUserDefaults()
         
-        db.collection("colors").getDocuments { querySnapshot, error in
+        if isConnected {
+            deleteAllColorsFromFirebase()
+        } else {
+            offlineTasks.append(.deleteAllColors)
+            saveOfflineTasks()
+            print("Offline - Will retry deleting all colors from Firebase later.")
+        }
+    }
+
+    func syncWithFirebase(colorCard: ColorCard) {
+        let db = Firestore.firestore()
+        db.collection("colors").addDocument(data: [
+            "hex": colorCard.hex,
+            "timestamp": colorCard.timestamp
+        ]) { error in
             if let error = error {
                 self.handleError(error)
             } else {
-                let deleteGroup = DispatchGroup()
-                
-                for document in querySnapshot!.documents {
-                    deleteGroup.enter()
-                    document.reference.delete { error in
-                        if let error = error {
-                            print("Error deleting color document \(document.documentID): \(error.localizedDescription)")
-                            self.showingErrorAlert = true
-                            self.errorMessage = error.localizedDescription
-                        } else {
-                            print("Deleted color document \(document.documentID) from Firebase.")
-                        }
-                        deleteGroup.leave()
-                    }
-                }
-                
-                deleteGroup.notify(queue: .main) {
-                    print("All color documents deletion process completed.")
-                }
+                print("Color \(colorCard.hex) synced successfully")
             }
         }
     }
-    
-    func deleteColorFromFirebase(_ card: ColorCard, completion: @escaping (Error?) -> Void) {
+
+    private func setupNetworkMonitor() {
+        monitor.pathUpdateHandler = { path in
+            DispatchQueue.main.async {
+                if !self.manualMode {
+                    self.isConnected = path.status == .satisfied
+                    if self.isConnected {
+                        print("Network status: Online")
+                        self.retrySyncForOfflineData()
+                    } else {
+                        print("Network status: Offline")
+                    }
+                }
+            }
+        }
+        monitor.start(queue: queue)
+    }
+
+    func fetchColorsFromFirebase() {
+        let db = Firestore.firestore()
+        db.collection("colors").addSnapshotListener { querySnapshot, error in
+            if let error = error {
+                self.handleError(error)
+            } else {
+                let colors = querySnapshot?.documents.map { $0.data() } ?? []
+                print("Fetched colors from Firebase: \(colors)")
+            }
+        }
+    }
+
+    private func deleteColorFromFirebase(_ card: ColorCard, completion: @escaping (Error?) -> Void) {
         let db = Firestore.firestore()
         
         db.collection("colors")
@@ -230,53 +218,115 @@ class ColorViewModel: ObservableObject {
                 }
             }
     }
-    
-    func retrySyncForOfflineData() {
-        guard isConnected else { return }
-        
-        for card in colorCards {
-            print("Attempting to sync color \(card.hex) with Firebase")
-            syncWithFirebase(colorCard: card)
-        }
-        deleteColorsFromFirebaseIfNeeded()
-    }
-    
-    func deleteColorsFromFirebaseIfNeeded() {
+
+    func deleteAllColorsFromFirebase() {
         let db = Firestore.firestore()
         
         db.collection("colors").getDocuments { querySnapshot, error in
             if let error = error {
                 self.handleError(error)
             } else {
-                let existingColors = querySnapshot?.documents.compactMap { $0.data()["hex"] as? String } ?? []
-                let deletedColors = self.colorCards.filter { !existingColors.contains($0.hex) }
-                
                 let deleteGroup = DispatchGroup()
                 
-                for card in deletedColors {
+                for document in querySnapshot!.documents {
                     deleteGroup.enter()
-                    self.deleteColorFromFirebase(card) { error in
+                    document.reference.delete { error in
                         if let error = error {
-                            print("Error deleting color \(card.hex): \(error.localizedDescription)")
+                            print("Error deleting color document \(document.documentID): \(error.localizedDescription)")
                             self.showingErrorAlert = true
                             self.errorMessage = error.localizedDescription
                         } else {
-                            print("Color \(card.hex) deleted from Firebase.")
+                            print("Deleted color document \(document.documentID) from Firebase.")
                         }
                         deleteGroup.leave()
                     }
                 }
                 
                 deleteGroup.notify(queue: .main) {
-                    print("All deletion process for offline colors completed.")
+                    print("All color documents deletion process completed.")
                 }
             }
         }
     }
-    
+
+    func deleteAllColorsFromUserDefaults() {
+        colorCards.removeAll()
+        UserDefaults.standard.removeObject(forKey: "colorCards")
+        print("All colors deleted from UserDefaults.")
+    }
+
+    private func retrySyncForOfflineData() {
+        guard isConnected else { return }
+        
+        let tasks = offlineTasks
+        offlineTasks.removeAll()
+        saveOfflineTasks()
+        
+        for task in tasks {
+            switch task {
+            case .addColor(let colorCard):
+                syncWithFirebase(colorCard: colorCard)
+            case .deleteColor(let hex):
+                deleteColorFromFirebaseByHex(hex)
+            case .deleteAllColors:
+                deleteAllColorsFromFirebase()
+            }
+        }
+    }
+
+    private func deleteColorFromFirebaseByHex(_ hex: String) {
+        let db = Firestore.firestore()
+        
+        db.collection("colors")
+            .whereField("hex", isEqualTo: hex)
+            .getDocuments { querySnapshot, error in
+                if let error = error {
+                    self.handleError(error)
+                } else if let documents = querySnapshot?.documents, !documents.isEmpty {
+                    let deleteGroup = DispatchGroup()
+                    
+                    for document in documents {
+                        deleteGroup.enter()
+                        document.reference.delete { error in
+                            if let error = error {
+                                print("Error deleting color \(hex): \(error.localizedDescription)")
+                                self.showingErrorAlert = true
+                                self.errorMessage = error.localizedDescription
+                            } else {
+                                print("Color \(hex) deleted from Firebase.")
+                            }
+                            deleteGroup.leave()
+                        }
+                    }
+                    
+                    deleteGroup.notify(queue: .main) {
+                        print("Deletion of color \(hex) completed.")
+                    }
+                } else {
+                    print("No document found for color \(hex).")
+                }
+            }
+    }
+
     private func handleError(_ error: Error) {
-        print("An error occurred: \(error.localizedDescription)")
-        self.errorMessage = error.localizedDescription
-        self.showingErrorAlert = true
+        showingErrorAlert = true
+        errorMessage = error.localizedDescription
+    }
+
+    private func saveOfflineTasks() {
+        let encoder = JSONEncoder()
+        if let encoded = try? encoder.encode(offlineTasks) {
+            UserDefaults.standard.set(encoded, forKey: "offlineTasks")
+            print("Saved offline tasks to UserDefaults.")
+        }
+    }
+
+    private func loadOfflineTasks() {
+        let decoder = JSONDecoder()
+        if let data = UserDefaults.standard.data(forKey: "offlineTasks"),
+           let tasks = try? decoder.decode([OfflineTask].self, from: data) {
+            offlineTasks = tasks
+            print("Loaded offline tasks from UserDefaults.")
+        }
     }
 }

@@ -14,9 +14,9 @@
 		BC6DD8342C9B5720007C2C0B /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BC6DD8332C9B5720007C2C0B /* Preview Assets.xcassets */; };
 		BC6DD83C2C9B5CD8007C2C0B /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC6DD83B2C9B5CD8007C2C0B /* AppDelegate.swift */; };
 		BCB378E52C9BECD400373404 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = BCB378E42C9BECD300373404 /* GoogleService-Info.plist */; };
-		BCB378E72C9BF13B00373404 /* ColourViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB378E62C9BF13B00373404 /* ColourViewModel.swift */; };
+		BCB378E72C9BF13B00373404 /* ColorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB378E62C9BF13B00373404 /* ColorViewModel.swift */; };
 		BCB378E92C9BF17400373404 /* Model.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB378E82C9BF17400373404 /* Model.swift */; };
-		BCB378EF2C9BF55F00373404 /* ColourCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB378EE2C9BF55F00373404 /* ColourCardView.swift */; };
+		BCB378EF2C9BF55F00373404 /* ColorCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCB378EE2C9BF55F00373404 /* ColorCardView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,9 +29,9 @@
 		BC6DD8332C9B5720007C2C0B /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		BC6DD83B2C9B5CD8007C2C0B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		BCB378E42C9BECD300373404 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
-		BCB378E62C9BF13B00373404 /* ColourViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColourViewModel.swift; sourceTree = "<group>"; };
+		BCB378E62C9BF13B00373404 /* ColorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorViewModel.swift; sourceTree = "<group>"; };
 		BCB378E82C9BF17400373404 /* Model.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model.swift; sourceTree = "<group>"; };
-		BCB378EE2C9BF55F00373404 /* ColourCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColourCardView.swift; sourceTree = "<group>"; };
+		BCB378EE2C9BF55F00373404 /* ColorCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCardView.swift; sourceTree = "<group>"; };
 		CC84588F7C0E703A176A36B1 /* Pods-ColourPickerApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ColourPickerApp.release.xcconfig"; path = "Target Support Files/Pods-ColourPickerApp/Pods-ColourPickerApp.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -124,7 +124,7 @@
 		BCB378EC2C9BF31000373404 /* VIEWMODEL */ = {
 			isa = PBXGroup;
 			children = (
-				BCB378E62C9BF13B00373404 /* ColourViewModel.swift */,
+				BCB378E62C9BF13B00373404 /* ColorViewModel.swift */,
 			);
 			path = VIEWMODEL;
 			sourceTree = "<group>";
@@ -133,7 +133,7 @@
 			isa = PBXGroup;
 			children = (
 				BC6DD82E2C9B571E007C2C0B /* ContentView.swift */,
-				BCB378EE2C9BF55F00373404 /* ColourCardView.swift */,
+				BCB378EE2C9BF55F00373404 /* ColorCardView.swift */,
 			);
 			path = VIEW;
 			sourceTree = "<group>";
@@ -253,9 +253,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BCB378EF2C9BF55F00373404 /* ColourCardView.swift in Sources */,
+				BCB378EF2C9BF55F00373404 /* ColorCardView.swift in Sources */,
 				BCB378E92C9BF17400373404 /* Model.swift in Sources */,
-				BCB378E72C9BF13B00373404 /* ColourViewModel.swift in Sources */,
+				BCB378E72C9BF13B00373404 /* ColorViewModel.swift in Sources */,
 				BC6DD83C2C9B5CD8007C2C0B /* AppDelegate.swift in Sources */,
 				BC6DD82F2C9B571E007C2C0B /* ContentView.swift in Sources */,
 				BC6DD82D2C9B571E007C2C0B /* ColourPickerAppApp.swift in Sources */,

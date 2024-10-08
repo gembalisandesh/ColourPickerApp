@@ -46,3 +46,8 @@ struct ColorCard: Identifiable, Codable {
         try container.encode(components, forKey: .colorComponents)
     }
 }
+enum OfflineTask: Codable {
+    case addColor(ColorCard)
+    case deleteColor(String)
+    case deleteAllColors
+}

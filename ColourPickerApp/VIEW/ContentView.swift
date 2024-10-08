@@ -44,7 +44,7 @@ struct ContentView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Your device is offline. Go online to sync with Firebase.")
+                Text("Your device is offline. Changes will be synced when you're back online.")
             }
             .onChange(of: viewModel.isConnected) {
                 if !viewModel.isConnected {
@@ -72,7 +72,7 @@ struct ContentView: View {
             Text("Generate Random Color")
                 .fontWeight(.semibold)
                 .padding()
-                .frame(maxWidth: .infinity,maxHeight: 90)
+                .frame(maxWidth: .infinity, maxHeight: 90)
                 .background(Color.blue)
                 .foregroundColor(.white)
                 .cornerRadius(10)
@@ -85,7 +85,7 @@ struct ContentView: View {
             Text("Delete All Colors")
                 .fontWeight(.semibold)
                 .padding()
-                .frame(maxWidth: .infinity,maxHeight: 90)
+                .frame(maxWidth: .infinity, maxHeight: 90)
                 .background(Color.red)
                 .foregroundColor(.white)
                 .cornerRadius(10)
@@ -116,23 +116,13 @@ struct ContentView: View {
         let timestamp = Date()
         
         let colorCard = ColorCard(color: newColor, hex: hex, timestamp: "\(timestamp)")
-        viewModel.colorCards.append(colorCard)
-        viewModel.saveColorsToUserDefaults()
-        
-        if viewModel.isConnected {
-            viewModel.syncWithFirebase(colorCard: colorCard)
-        }
+        viewModel.addColor(colorCard)
     }
     
     private func deleteAllColors() {
-        viewModel.deleteAllColorsFromUserDefaults()
-        
-        if viewModel.isConnected {
-            viewModel.deleteAllColorsFromFirebase()
-        }
+        viewModel.deleteAllColors()
     }
 }
-
 
 #Preview {
     ContentView()
